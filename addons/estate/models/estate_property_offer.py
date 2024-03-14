@@ -1,4 +1,5 @@
-from odoo import models, fields, api
+from odoo import models, fields, api, _
+from odoo.exceptions import UserError
 # import logging
 # _logger = logging.getLogger(__name__)
 
@@ -9,7 +10,8 @@ class PropertyOffer(models.Model):
     price = fields.Float()
     status = fields.Selection(
         selection=[('accepted', 'Accepted'), ('refused', 'Refused')],
-        copy=False
+        copy=False,
+        readonly=True
     )
     partner_id = fields.Many2one(
         "res.partner",
@@ -38,3 +40,21 @@ class PropertyOffer(models.Model):
     def _inverse_date_deadline(self):
         for offer in self:
             offer.validity = (offer.date_deadline - offer.create_date.date()).days
+
+    def action_set_accepted(self):
+        for offer in self:
+            if offer.status:
+                raise UserError(_('Refused offers cannot be accepted.'))
+            offer.status = 'accepted'
+            property = offer.property_id
+            property.buyer_id = offer.partner_id
+            property.selling_price = offer.price
+            other_offers = property.offer_ids.search([('id', '!=', offer.id)])
+            for off in other_offers:
+                off.status ='refused'
+        return True
+
+    def action_set_refused(self):
+        for offer in self:
+            offer.status ='refused'
+        return True
