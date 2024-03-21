@@ -65,6 +65,7 @@ class PropertyOffer(models.Model):
             property = offer.property_id
             property.buyer_id = offer.partner_id
             property.selling_price = offer.price
+            property.state = 'offer_accepted'
             other_offers = property.offer_ids.search([('id', '!=', offer.id)])
             for off in other_offers:
                 off.status ='refused'
@@ -74,3 +75,12 @@ class PropertyOffer(models.Model):
         for offer in self:
             offer.status ='refused'
         return True
+    
+    @api.model
+    def create(self, vals):
+        property = self.env['estate.property'].browse(vals.get('property_id'))
+        if property.best_price > vals.get('price'):
+            raise UserError(_('Offer with higher price exists'))
+
+        property.state = 'offer_received'
+        return super().create(vals)

@@ -123,3 +123,9 @@ class Property(models.Model):
         for property in self:
             if property.selling_price < property.expected_price * 0.9:
                 raise ValidationError(_('The selling price must be at least 90% from the expected price.'))
+    
+    @api.ondelete(at_uninstall=False)
+    def check_state_befor_delete(self):
+        for property in self:
+            if property.state != 'new' and property.state != 'canceled':
+                raise UserError(_('Property cannot be deleted.'))
