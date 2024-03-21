@@ -6,6 +6,7 @@ from odoo.exceptions import UserError
 class PropertyOffer(models.Model):
     _name = "estate.property.offer"
     _description = "The real estate property offer"
+    _order = "price desc"
 
     price = fields.Float()
     status = fields.Selection(
@@ -30,6 +31,12 @@ class PropertyOffer(models.Model):
         inverse="_inverse_date_deadline",
         string="Deadline"
     )
+    property_type_id = fields.Many2one(
+        "estate.property.type",
+        compute="_compute_property_type_id",
+        store=True,
+        readonly=True
+    )
 
     _sql_constraints = [
         ("price_strictly_positive", "CHECK(price > 0)", "The price must be strictly positive.")
@@ -44,6 +51,11 @@ class PropertyOffer(models.Model):
     def _inverse_date_deadline(self):
         for offer in self:
             offer.validity = (offer.date_deadline - offer.create_date.date()).days
+
+    @api.depends("property_id.property_type_id")
+    def _compute_property_type_id(self):
+        for offer in self:
+            offer.property_type_id = offer.property_id.property_type_id
 
     def action_set_accepted(self):
         for offer in self:
